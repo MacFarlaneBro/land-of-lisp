@@ -113,3 +113,8 @@
 *location*
 
 (walk 'west)
+
+;; Keyword parameters
+;; special parameters passed at the end of a function call allowing access to built in features
+;; Syntax - ':keyword-name keyword-value'
+
