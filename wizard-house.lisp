@@ -118,3 +118,23 @@
 ;; special parameters passed at the end of a function call allowing access to built in features
 ;; Syntax - ':keyword-name keyword-value'
 
+(defun pickup (object)
+  ;; If the object argument matches an object at the current location
+  (cond ((member object
+		 (objects-at *location* *objects* *object-locations*))
+	 ;; Prepend the given value to the supplied list
+	 (push
+	  ;; create a new list consisting of the object and 'body' the new location
+	  (list object 'body)
+	  ;; The list to add the above created list to
+	  *object-locations*)
+	 ;; Print a message informing the player that they are now carrying the object
+	 `(you are now carrying the ,object))
+	;; if the object does not match an object at the given location, slap the players hand
+	(t '(you cannot get that.))))
+
+;; N.B. Although the push command always adds a new value to the alist, when extracting items with assoc, we always receive the first matching item i.e. the most recently added. So aside from eternally growing larger in size, functionally this works the same as assigning a new value to a dictionary item.
+
+(walk 'east)
+
+(pickup 'whiskey)
