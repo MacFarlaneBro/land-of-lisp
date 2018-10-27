@@ -138,3 +138,9 @@
 (walk 'east)
 
 (pickup 'whiskey)
+
+(defun inventory ()
+  ;; Append the symbol 'items-' to a list of the items currently at location 'body'
+  (cons 'items- (objects-at 'body *objects* *object-locations*)))
+
+(inventory)
