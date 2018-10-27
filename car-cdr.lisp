@@ -37,5 +37,3 @@
 (cadddr triple-nested)
 ;; => (D E (F))
 ;; Return the fourth element in the list
-
-(cadadr triple-nested)
