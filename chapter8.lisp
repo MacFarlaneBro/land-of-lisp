@@ -312,3 +312,51 @@
 
 (defun draw-known-city ()
   (ugraph->png "known-city" (known-city-nodes) (known-city-edges)))
+
+(defun walk (pos)
+  (handle-direction pos nil))
+
+(defun charge (pos)
+  (handle-direction pos t))
+
+(defun handle-direction (pos charging)
+  (let ((edge
+	  ;; Get the chosen edge
+	  (assoc pos
+		 ;; Get the list of edges adjacent to the player position
+		 (cdr
+		  (assoc *player-pos* *congestion-city-edges*)))))
+    ;; If the edge exist
+    (if edge
+	;; Move to the node on the other side of the edge
+	(handle-new-place edge pos charging)
+	;; Otherwise warn the user
+	(princ "That location does not exist!"))))
+
+(defun handle-new-place (edge pos charging)
+  (let* ((node
+	   ;; The position to move to
+	   (assoc pos *congestion-city-nodes*))
+	 ;;  Var is true if node is in the glow worm gang list
+	 (has-worm (and (member 'glow-worm node)
+			;; and has not yet been visited
+			(not (member pos *visited-nodes*)))))
+    ;; Append the node-number pos to the list of visited nodes
+    (pushnew pos *visited-nodes*)
+    ;; set player-pos to the current node number
+    (setf *player-pos* pos)
+    ;; redraw the city based on the new info
+    (draw-known-city)
+    (cond
+      ;; If the edge is in the cops list, game over
+      ((member 'cops edge) (princ "You ran into the cops. Game Over."))
+      ;; If the node list contains wumpus
+      ((member 'wumpus node) (if charging
+				 (princ "You found the Wumpus!")
+				 (princ "You ran into the Wumpus")))
+      (charging (princ "You wasted your last bullet. Game Over."))
+      ;; If the node has a worm gang, move the player to a random new node
+      (has-worm (let ((new-pos (random-node)))
+		  (princ "You ran into a Glow Worm Gang! You're now at ")
+		  (princ new-pos)
+		  (handle-new-place nil new-pos nil))))))
