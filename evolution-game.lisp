@@ -80,3 +80,94 @@
 	    ;; mod 8 to keep it 0-7
 	    (mod (+ (animal-dir animal) (angle (animal-genes animal) x))
 		 8)))))
+
+(defun eat (animal)
+  ;; a cons consisting of the x and y locations of the animal
+  (let ((pos (cons (animal-x animal) (animal-y animal))))
+    ;; Use that cons to get the energy of the plant at the animals location
+    (when (gethash pos *plants*)
+      ;; Increase the animals energy by the plants energy
+      (incf (animal-energy animal) *plant-energy*)
+      ;; Remove the plant from the plants hash table
+      (remhash pos *plants*))))
+
+(defparameter *reproduction-energy* 200)
+
+(defun reproduce (animal)
+  ;; Assign animal energy to local var e
+  (let ((e (animal-energy animal)))
+    ;; If e is greater than or equal to reproduction energy
+    (when (>= e *reproduction-energy*)
+      ;; reduce the animals energy by half
+      (setf (animal-energy animal) (ash e -1))
+      ;; copy out the animal
+      (let ((animal-nu (copy-structure animal))
+	    ;; copy the animals genes
+	    (genes     (copy-list (animal-genes animal)))
+	    ;; assign a random number between 1 and 8 to mutation
+	    (mutation (random 8)))
+	;; Get the gene index referenced by 'mutation and set it
+	(setf (nth mutation genes)
+	      ;; to either one or it's current value + random (0-3) + -1
+	      (max 1 (+ (nth mutation genes) (random 3) -1)))
+	(setf (animal-genes animal-nu) genes)
+	(push animal-nu *animals*)))))
+
+
+(defun update-world ()
+  ;; Remove all the animals with no energy left
+  (setf *animals* (remove-if (lambda (animal)
+			       (<= (animal-energy animal) 0))
+			     *animals*))
+  ;; Make all the animals turn, move, eat and reproduce
+  (mapc (lambda (animal)
+	  (turn animal)
+	  (move animal)
+	  (eat animal)
+	  (reproduce animal))
+	*animals*)
+  ;; Add some plants
+  (add-plants))
+
+(defun draw-world ()
+  ;; For each y index tick
+  (loop for y
+	  below *height*
+	;; Start a new line
+	do (progn (fresh-line)
+		  ;; Print a pipe at the beginning of the line
+		  (princ "|")
+		  ;; For each x index tick
+		  (loop for x
+			  below *width*
+			;; If there's an animal at this locatino print the letter m
+			do (princ (cond ((some (lambda (animal)
+						 (and (= (animal-x animal) x)
+						      (= (animal-y animal) y)))
+					       *animals*)
+					 #\M)
+					;; If their's a plant, print an asterisk
+					((gethash (cons x y) *plants*) #\*)
+					;; Otherwise print a space
+					(t #\space))))
+		  ;; Print a pipe at the end of the line
+		  (princ "|"))))
+
+(defun evolution ()
+  (draw-world)
+  (fresh-line)
+  (let ((str (read-line)))
+    ;; Unless teh user entered quit
+    (cond ((equal str "quit") ())
+	  ;; Run the simulation for x number of times
+	  (t (let ((x (parse-integer str :junk-allowed t)))
+	       (if x
+		   (loop for i
+			   below x
+			 do (update-world)
+			    ;; print a dot every thousand days
+			 if (zerop (mod i 1000))
+			   do (princ #\.))
+		   (update-world))
+	       ;; Rerun the function
+	       (evolution))))))
