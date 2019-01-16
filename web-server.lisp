@@ -125,7 +125,7 @@
 
 (defun serve (request-handler)
   ;; Assign a socket at port 8080
-  (let ((socket (socket-server 8080)))
+  (let ((socket (socket-server 8069)))
     ;; Evaluate exp1 and then always evaluate exp2, regardless of errors from exp1
     (unwind-protect
 	 ;; exp1
@@ -147,10 +147,23 @@
       (socket-server-close socket))))
 
 (defun hello-request-handler (path header params)
+  ;; If the user requested the greeting path
   (if (equal path "greeting")
+      ;; Try and get their name from the params
       (let ((name (assoc 'name params)))
+	;; If it doesn't include a name parameter
 	(if (not name)
-	    (princ "<html><form>What is your name?<input name='name '/>
+	    ;; Show a form to enter a name
+	    (princ "<html><form>What is your name?<input name='name' />
 </form></html>")
+	    ;; Otherwise greet that name
 	    (format t "<html>Nice to meet you, ~a!</html>" (cdr name))))
+      ;; If it isn't the greeting path show a kind of 404 message
       (princ "Sorry... I don't know that page.")))
+
+(hello-request-handler "lolcats" '() '())
+
+(hello-request-handler "greeting" '() '((name . "Bob")))
+(hello-request-handler "greeting" '() '())
+
+(serve #'hello-request-handler)
