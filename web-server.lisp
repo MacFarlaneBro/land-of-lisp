@@ -105,3 +105,52 @@
     ;; While there are header lines left keep recursing
     (when h
       (cons h (get-header stream)))))
+
+;; The list of headers must terminate in an empty line to be parsed correctly
+(get-header (make-string-input-stream "foo: 1 bar: abc, 123
+
+"))
+
+(defun get-content-params (stream header)
+  ;; Create a length var from the value of the content length alist entry
+  (let ((length (cdr (assoc 'content-length header))))
+    ;; If content length was present & therefore not nil
+    (when length
+      ;; Create a string of the exact length specified in the content-length
+      (let ((content (make-string (parse-integer length))))
+	;; read the value of the stream into the content string
+	(read-sequence content stream)
+	;; Parse the parameters from the content string
+	(parse-params content)))))
+
+(defun serve (request-handler)
+  ;; Assign a socket at port 8080
+  (let ((socket (socket-server 8080)))
+    ;; Evaluate exp1 and then always evaluate exp2, regardless of errors from exp1
+    (unwind-protect
+	 ;; exp1
+	 (loop
+	   ;; Using a stream opened from the above socket
+	   (with-open-stream (stream (socket-accept socket))
+	     ;; Get teh various parts of the the incoming request
+	     (let* ((url (parse-url (read-line stream)))
+		    (path (car url))
+		    (header (get-header stream))
+		    (params (append (cdr url)
+				    (get-content-params stream header)))
+		    ;; Redefine standard output to the client stream
+		    (*standard-output* stream))
+	       ;; Call the request handler with the parsed request components
+	       (funcall request-handler path header params))))
+      ;; exp2
+      ;; Finally, close the socket
+      (socket-server-close socket))))
+
+(defun hello-request-handler (path header params)
+  (if (equal path "greeting")
+      (let ((name (assoc 'name params)))
+	(if (not name)
+	    (princ "<html><form>What is your name?<input name='name '/>
+</form></html>")
+	    (format t "<html>Nice to meet you, ~a!</html>" (cdr name))))
+      (princ "Sorry... I don't know that page.")))
