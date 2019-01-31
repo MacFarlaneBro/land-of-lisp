@@ -10,6 +10,37 @@
   ;; Create a new array containing the contents of lst
   (make-array *board-hexnum* :initial-contents lst))
 
+(defun game-tree (board player spare-dice first-move)
+  ;; put the player, board and passing move in a list and return it
+  (list player
+	board
+	(add-passing-move board
+			  player
+			  spare-dice
+			  first-move
+			  (attacking-moves board player spare-dice))))
+
+(defun add-passing-move (board player spare-dice first-move moves)
+  ;; If it's the players first move
+  (if first-move
+      ;; Return moves
+      moves
+      ;; otherwise cons togher the moves
+      (cons
+       ;; and a list starting with nil
+       (list nil
+	     ;; Then containing the remaining game tree
+	     (game-tree
+	      ;; The current state of teh board
+	      (add-new-dice board player (1- space-dice))
+	      ;; The player
+	      (mod (1- player) *num-players*)
+	      ;; The spare dice
+	      0
+	      ;; whether it's the first move (it is, because first-move it true)
+	      t))
+       moves)))
+
 ;; Dirty, imperative code
 
 (defun gen-board ()
@@ -17,12 +48,12 @@
   (board-array
    ;; For each n in board-hexnum
    (loop for n below *board-hexnum*
-	 ;; Create a list of
-	 collect
-	 ;; Create a list consisting of a player number
-	 (list (random *num-players*)
-	       ;; And 1 + a number between zero and the max number of dice per hexagon
-	       (1+ (random *max-dice*))))))
+      ;; Create a list of
+      collect
+      ;; Create a list consisting of a player number
+	(list (random *num-players*)
+	      ;; And 1 + a number between zero and the max number of dice per hexagon
+	      (1+ (random *max-dice*))))))
 
 (gen-board)
 
