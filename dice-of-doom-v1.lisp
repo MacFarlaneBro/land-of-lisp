@@ -41,6 +41,42 @@
 	      t))
        moves)))
 
+(defun attaching-moves (board cur-player spare-dice)
+  ;; Define the new functions 'player' taking the argument 'pos' and 'dice' taking the remainder of pos from array board.
+  (labels ((player (pos)
+	     ;; Get the first element from index 'pos' of array 'board'
+	     (car (aref board pos)))
+	   ;; get the remainder of index pos from array board
+	   (dice (pos)
+	     (cadr (aref board pos))))
+    ;; apply the supplied function to each element in the sequence, concatenating the results of each operation together
+    (mapcan (lambda (src)
+	      ;; If the current player in the sequence is the current player
+	      (when (eq (player src) cur-player)
+		;; For each
+		(mapcan (lambda (dst)
+			  ;; If The current player is not the destination player
+			  (when (and (not (eq (player dst) cur-player))
+				     ;; and the the number of dice at the current location is greater than the number of dice at the destination location
+				     (> (dice src) (dice dst)))
+			    (list
+			     (list
+			      ;; Create a list of the source and the destination
+			      (list src dst)
+			      ;; call the 'game-tree' function using the 'board-attack' move
+			      (game-tree (board-attack board cur-player src dst (dice src))
+					 ;; The current player
+					 cur-player
+					 ;; Add the number of space dice to the number of dice at the attacked destination
+					 (+ spare-dice (dice dst))
+					 ;; Assert that this isn't the first turn
+					 nil)))))
+			;; Apply the above function to all neighbors of the current src location
+			(neighbors src))))
+	    ;; Apply the above function for every hex on the board.
+	    (loop for n below *board-hexnum*
+	       collect n))))
+
 ;; Dirty, imperative code
 
 (defun gen-board ()
