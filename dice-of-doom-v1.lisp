@@ -102,6 +102,52 @@
 		    collect p)))
 
 (neighbors 2)
+
+;;Attacking
+
+(defun board-attack (board player src dst dice)
+  "Determine what happens if the hexagon src attacks the hexagon dst"
+  ;; Keep track of the current position while looping across the board
+  (board-array (loop for pos
+		     ;; Keep track of the hexagon at the current position
+		     for hex across board
+		     ;; If the current hexagon is the source hexagon then place a single die there
+		     collect (cond ((eq pos src) (list player 1))
+				   ;; If the current hexagon is the destination then place the remaining dice there subtracting the one left behind
+				   ((eq pos dst) (list player (1- dice)))
+				   ;; Otherwise just leave the hexagon the way it is
+				   (t hex)))))
+
+(board-attack #((0 3) (0 3) (1 3) (1 1)) 0 1 3 3)
+
+(defun add-new-dice (board player spare-dice)
+  "At the end of each round the player receives reinforcements"
+  ;; Define temporary function f which takes a list and a number as arguments
+  (labels ((f (lst n)
+	     ;; If the list is nil returnnil
+	     (cond ((null lst) nil)
+		   ;;  If the number is zero return the list
+		   ((zerop n) lst)
+		   ;; Otherwise define current player
+		   (t (let ((cur-player (caar lst))
+			    ;; And the current dice
+			    (cur-dice (cadar lst)))
+			;; If the current player is this turns player and the current number of dice is less than the maximum number of dice
+			(if (and (eq cur-player player) (< cur-dice *max-dice*))
+			    ;; Add a die to the current player
+			    (cons (list cur-player (1+ cur-dice))
+				  ;; Call the function on the remaineder of the list
+				  (f (cdr list)
+				     ;; and one minus the number
+				     (1- n)))
+			    ;; Otherwise
+			    ;; Combine the beginning of the list
+			    (cons (car lst)
+				  ;; With the result of calling the function on the remainder of the lsit and the current numner
+				  (f (cdr lst) n))))))))
+    ;; Call the locally defined function shown above on the board (after converting it to a list from an array and the number of space
+    (board-array (f (coerce board 'list) spare-dice))))
+
 ;; Dirty, imperative code
 
 (defun gen-board ()
