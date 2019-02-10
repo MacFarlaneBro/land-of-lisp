@@ -32,7 +32,7 @@
 	     ;; Then containing the remaining game tree
 	     (game-tree
 	      ;; The current state of teh board
-	      (add-new-dice board player (1- space-dice))
+	      (add-new-dice board player (1- spare-dice))
 	      ;; The player
 	      (mod (1- player) *num-players*)
 	      ;; The spare dice
@@ -137,7 +137,7 @@
 			    ;; Add a die to the current player
 			    (cons (list cur-player (1+ cur-dice))
 				  ;; Call the function on the remaineder of the list
-				  (f (cdr list)
+				  (f (cdr lst)
 				     ;; and one minus the number
 				     (1- n)))
 			    ;; Otherwise
@@ -148,6 +148,7 @@
     ;; Call the locally defined function shown above on the board (after converting it to a list from an array and the number of space
     (board-array (f (coerce board 'list) spare-dice))))
 
+(add-new-dice #((0 1) (1 3) (0 2) (1 1)) 0 2)
 ;; Dirty, imperative code
 
 (defun gen-board ()
@@ -190,3 +191,5 @@
 			      (second hex))))))
 
 (draw-board (gen-board))
+
+(game-tree #((0 1) (1 1) (0 2) (1 1)) 0 0 t)
