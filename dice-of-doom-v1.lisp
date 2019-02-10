@@ -41,7 +41,7 @@
 	      t))
        moves)))
 
-(defun attaching-moves (board cur-player spare-dice)
+(defun attacking-moves (board cur-player spare-dice)
   ;; Define the new functions 'player' taking the argument 'pos' and 'dice' taking the remainder of pos from array board.
   (labels ((player (pos)
 	     ;; Get the first element from index 'pos' of array 'board'
@@ -77,6 +77,31 @@
 	    (loop for n below *board-hexnum*
 	       collect n))))
 
+(defun neighbors (pos)
+  ;; Define up as the users current position - the board size
+  (let ((up (- pos *board-size*))
+	;; Define down as the users current position plus the board size
+	(down (+ pos *board-size*)))
+    ;; For each item in 
+    (loop for p in (append
+		    ;; Create a list of the up and down variables and append it to
+		    (list up down)
+		    ;; if the position is not equal to board size
+		    (unless (zerop (mod pos *board-size*))
+		      ;; move position to up -1 and position - 1
+		      (list (1- up) (1- pos)))
+		    ;; if the board size is one more than the current position
+		    (unless (zerop (mod (1+ pos) *board-size*))
+				   ;; move position to up +1 and position + 1
+				   (list (1+ pos) (1+ down))))
+		    ;; When the current iteration element is not negative 
+		    when (and (>= p 0)
+			      ;; and is less than the board size
+			      (< p *board-hexnum*))
+		    ;; add p to the current list being generated
+		    collect p)))
+
+(neighbors 2)
 ;; Dirty, imperative code
 
 (defun gen-board ()
@@ -84,12 +109,12 @@
   (board-array
    ;; For each n in board-hexnum
    (loop for n below *board-hexnum*
-      ;; Create a list of
-      collect
-      ;; Create a list consisting of a player number
-	(list (random *num-players*)
-	      ;; And 1 + a number between zero and the max number of dice per hexagon
-	      (1+ (random *max-dice*))))))
+	 ;; Create a list of
+	 collect
+	 ;; Create a list consisting of a player number
+	 (list (random *num-players*)
+	       ;; And 1 + a number between zero and the max number of dice per hexagon
+	       (1+ (random *max-dice*))))))
 
 (gen-board)
 
