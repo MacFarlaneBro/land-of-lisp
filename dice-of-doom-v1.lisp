@@ -148,7 +148,38 @@
     ;; Call the locally defined function shown above on the board (after converting it to a list from an array and the number of space
     (board-array (f (coerce board 'list) spare-dice))))
 
+(defun winners (board)
+  ;; Define tally as the car of all the hexes on the board
+  ;; Use across loop construct to directly traverse array
+  (let* ((tally (loop for hex across board
+		      collect (car hex)))
+	 ;; Define totals as The number of hexes each player occupies
+	 (totals (mapcar (lambda (player)
+			   ;; Create an alist of players and the number of occurences of player in tally
+			   (cons player (count player tally)))
+			 ;; Remove any duplicates from tally before passing them into the above lambda
+			 (remove-duplicates tally)))
+	 ;; Define best as the player with the highest cdr value in the above totals
+	 (best (apply #'max (mapcar #'cdr totals))))
+    ;; For each element in totals pass in the player (car)
+    (mapcar #'car
+	    ;; remove it if their score is not equal to the best calculated score
+	    (remove-if (lambda (x)
+			 (not (eq (cdr x) best)))
+		       ;; Pass in each of the elements in totals
+		       totals))))
+
+(defun announce-winner (board)
+  (fresh-line)
+  ;; Set w to the result of the winners function
+  (let ((w (winners board)))
+    ;; If there is more than one winner
+    (if (> (length w) 1)
+	(format t "The game is a tie between ~a" (mapcar #'player-letter w))
+	(format t "The winner is ~a" (player-letter (car w))))))
+
 (add-new-dice #((0 1) (1 3) (0 2) (1 1)) 0 2)
+
 ;; Dirty, imperative code
 
 (defun gen-board ()
@@ -189,6 +220,53 @@
 		   do (format t "~a-~a " (player-letter (first hex))
 			      ;; print the number of dice on the hex
 			      (second hex))))))
+
+(defun play-vs-human (tree)
+  ;; Print some info about the current state of the tree
+  (print-info tree)
+  ;; If there are moves remaining
+  (if (caddr tree)
+      ;; Recurse the function on the current tree
+      (play-vs-human (handle-human tree))
+      ;; Announce the winner 
+      (announce-winner (cadr tree))))
+
+(defun print-info (tree)
+  ;; Print a new line
+  (fresh-line)
+  ;; Print the name of the current player 
+  (format t "current player = ~a" (player-letter (car tree)))
+  ;; Draw the current board
+  (draw-board (cadr tree)))
+
+(defun handle-human (tree)
+  ;; Print a new line
+  (fresh-line)
+  (princ "choose your move: ")
+  ;; Assign the moves available to the variable moves
+  (let ((moves (caddr tree)))
+    ;; For each of the available moves
+    (loop for move in moves
+	  ;; For each element in the list
+	  for n from 1
+	  ;; Assign the current move to 'action'
+	  do (let ((action (car move)))
+	       (fresh-line)
+	       ;; Print the move number
+	       (format t "~a. " n)
+	       ;; If an action exists
+	       (if action
+		   ;; Print the action available
+		   (format t "~a. -> ~a" (car action) (cadr action))
+		   ;; Otherwise end the turn
+		   (princ "end turn"))))
+    (fresh-line)
+    ;; get the remainder of the first item 
+    (cadr
+     ;; Return the element chosen by the player
+     (nth
+      ;; Deduct 1 first as we've increment all the choices by 1 to make them more human readable.
+      (1- (read)) moves))))
 
 (draw-board (gen-board))
 
