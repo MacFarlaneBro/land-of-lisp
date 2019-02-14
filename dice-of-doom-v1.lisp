@@ -178,6 +178,35 @@
 	(format t "The game is a tie between ~a" (mapcar #'player-letter w))
 	(format t "The winner is ~a" (player-letter (car w))))))
 
+(defun rate-position (tree player)
+  ;; Assign moves to all possible remaining moves
+  (let ((moves (caddr tree)))
+    ;; While moves is not nil
+    (if moves
+	;; If the player on this node of the tree is the curreent player then get the
+	(apply (if (eq (car tree) player)
+		   ;; highest rated move
+		   #'max
+		   ;; Otherwise it's the other player so get the lowest rated move
+		   #'min)
+	       ;; a list of all the possible moves and their quality ratings
+	       (get-ratings tree player))
+	;; If moves is nil then whoever is at the end of the tree is thee winner
+	(let ((w (winners (cadr tree))))
+	  ;; If the current player is in the winners list
+	  (if (member player w)
+	      ;; Return 1 divided by the number of winners in the list
+	      (/ 1 (length w))
+	      ;; Otherwise return 0
+	      0)))))
+
+(defun get-ratings (tree player)
+  ;; For each move in the tree
+  (mapcar (lambda (move)
+	    ;; get the rating for this player
+	    (rate-position (cadr move) player))
+	  (caddr tree)))
+
 (add-new-dice #((0 1) (1 3) (0 2) (1 1)) 0 2)
 
 ;; Dirty, imperative code
@@ -267,6 +296,27 @@
      (nth
       ;; Deduct 1 first as we've increment all the choices by 1 to make them more human readable.
       (1- (read)) moves))))
+
+(defun handle-computer (tree)
+  ;; Assign the result of calling get ratings for the computer
+  (let ((ratings (get-ratings tree (car tree))))
+    ;; For the resulting tree get the remainder of the first item
+    (cadr
+     ;; Get the item at the max rated position
+     (nth (position (apply #'max ratings) ratings)
+	  ;; get the item
+	  (caddr tree)))))
+
+(defun play-vs-computer (tree)
+  ;; Print the tree
+  (print-info tree)
+  (cond
+    ;; If the remaining tree is null announce the winner
+    ((null (caddr tree)) (announce-winner (cadr tree)))
+    ;; If it's player 0's go then execute the human go subroutine
+    ((zerop (car tree)) (play-vs-computer (handle-human tree)))
+    ;; If it's the computers go then execute the computers subroutine
+    (t (play-vs-computer (handle-computer tree)))))
 
 (draw-board (gen-board))
 
