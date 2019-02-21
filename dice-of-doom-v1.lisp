@@ -1,6 +1,6 @@
 (defparameter *num-players* 2)
 (defparameter *max-dice* 3)
-(defparameter *board-size* 2)
+(defparameter *board-size* 3)
 (defparameter *board-hexnum* (* *board-size* *board-size*))
 
 
@@ -293,7 +293,7 @@
     ;; get the remainder of the first item 
     (cadr
      ;; Return the element chosen by the player
-     (nth
+     (nthnn
       ;; Deduct 1 first as we've increment all the choices by 1 to make them more human readable.
       (1- (read)) moves))))
 
