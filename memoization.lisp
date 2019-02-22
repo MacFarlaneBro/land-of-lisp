@@ -42,3 +42,39 @@
 	  (setf (gethash tree tab)
 		;; Otherwise calculate the ratings for the current position
 		(funcall old-rate-position tree player))))))
+
+;; Tail Call Optimization
+
+(defun my-length (lst)
+  ;; If the argument is not null
+  (if lst
+      ;; Add one to the result and call the function again
+      (1+ (my-length (cdr lst)))
+      ;; Otherwise return 0
+      0))
+
+(my-length '(fie foh fum))
+
+(defparameter *biglist* (loop for i below 100000 collect 'x))
+(my-length *biglist*)
+
+;; Define a new function 'my-length'
+(defun my-length (lst)
+  ;; Define an inner function 'f' taking 2 args, one of which is the outer function list arg
+  (labels ((f (lst acc)
+	     ;; If lst is not yet null
+	     (if lst
+		 ;; Return the call the outer function
+		 (f
+		  ;; On the remainder of the list 
+		  (cdr lst)
+		  ;; and one plus the second argument
+		  (1+ acc))
+		 ;; Otherwise return the second argument
+		 acc)))
+    ;; Start the inner functions recursion execution with 0 as the second argument
+    (f lst 0)))
+
+(compile 'my-length)
+
+(my-length '(fie foh fum))

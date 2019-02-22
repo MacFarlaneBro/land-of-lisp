@@ -101,8 +101,6 @@
 		    ;; add p to the current list being generated
 		    collect p)))
 
-(neighbors 2)
-
 ;;Attacking
 
 (defun board-attack (board player src dst dice)
@@ -117,8 +115,6 @@
 				   ((eq pos dst) (list player (1- dice)))
 				   ;; Otherwise just leave the hexagon the way it is
 				   (t hex)))))
-
-(board-attack #((0 3) (0 3) (1 3) (1 1)) 0 1 3 3)
 
 (defun add-new-dice (board player spare-dice)
   "At the end of each round the player receives reinforcements"
@@ -207,8 +203,6 @@
 	    (rate-position (cadr move) player))
 	  (caddr tree)))
 
-(add-new-dice #((0 1) (1 3) (0 2) (1 1)) 0 2)
-
 ;; Dirty, imperative code
 
 (defun gen-board ()
@@ -293,7 +287,7 @@
     ;; get the remainder of the first item 
     (cadr
      ;; Return the element chosen by the player
-     (nthnn
+     (nth
       ;; Deduct 1 first as we've increment all the choices by 1 to make them more human readable.
       (1- (read)) moves))))
 
@@ -318,6 +312,55 @@
     ;; If it's the computers go then execute the computers subroutine
     (t (play-vs-computer (handle-computer tree)))))
 
-(draw-board (gen-board))
-
-(game-tree #((0 1) (1 1) (0 2) (1 1)) 0 0 t)
+(defun add-new-dice (board player spare-dice)
+  ;; Create a new function 'f' taking a list, number and accumulator as arguments
+  (labels ((f (lst n acc)
+	     ;; If n is zero
+	     (cond ((zerop n)
+		    ;; Append the reversed value of the accumulator to the list
+		    (append (reverse acc) lst))
+		   ;; If the list is null
+		   ((null lst)
+		    ;; Return the reversed value of the accumulator
+		    (reverse acc))
+		   ;; Otherwise
+		   (t
+		    ;; Assign a current player variable
+		    (let ((cur-player (caar lst))
+			  ;; Assign a current dice variable
+			  (cur-dice (cadar lst)))
+		      ;; If both the current player is the player calling the function
+		      (if (and (eq cur-player player)
+			       ;; And the current number of dice is less than the max
+			       ;; number of dice.
+			       (< cur-dice *max-dice*))
+			  ;; Call the locally defined function
+			  (f
+			   ;; with the remainder of the list
+			   (cdr lst)
+			   ;; with 1 less than the supplied n
+			   (1- n)
+			   ;; and with the combination
+			   (cons
+			    ;; Of the current player and one + the current dice 
+			    (list cur-player (1+ cur-dice))
+			    ;; And the current value of the accumulator
+			    acc))
+			  ;; Otherwise call the function
+			  (f
+			   ;; with the remainder of the list
+			   (cdr lst)
+			   ;; The current value of n
+			   n
+			   ;; And the first value of the list combined with the accumulator
+			   (cons (car lst) acc))))))))
+    ;; Pass the result of the function to the board array setting fucntion
+    (board-array
+     ;; Call the function initially
+     (f
+      ;; with the board coerced to a list 
+      (coerce board 'list)
+      ;; All of the spare dicee
+      spare-dice
+      ;; And an empty list for the accumulator
+      ()))))
