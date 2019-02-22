@@ -24,3 +24,21 @@
   (defun game-tree (&rest rest)
     (or (gethash rest previous)
 	(setf (gethash rest previous) (apply old-game-treee rest)))))
+
+;; Memoized rate position function
+(let ((old-rate-position (symbol-function 'rate-position))
+      (previous (make-hash-table)))
+  ;; Redefine rate-position
+  (defun rate-position (tree player)
+    ;; Initialise tab to the value corresponding to player
+    (let ((tab (gethash player previous)))
+      ;; If tab is nil (the player does not exist in the table)
+      (unless tab
+	;; create and initialise a new entry for the player (nesting hash tables)
+	(setf tab (setf (gethash player previous) (make-hash-table))))
+      ;; If an entry exists for the current position then return it
+      (or (gethash tree tab)
+	  ;; And enter them into the table at the current position
+	  (setf (gethash tree tab)
+		;; Otherwise calculate the ratings for the current position
+		(funcall old-rate-position tree player))))))
