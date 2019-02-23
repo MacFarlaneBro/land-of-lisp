@@ -1,5 +1,5 @@
 ;; Define a new macro called let1 which takes three arguments, var, val and body
-(defmacro let1 (var val
+(defmacro let1  (var val
 		;; This is essentially a varargs definition
 		&body body)
   ;; Transform those arguments into the lisp code defined below
@@ -80,3 +80,56 @@
 		 (tail (cdr ,g)))
 	     ,yes)
 	   ,no))))
+
+(macroexpand '(split '(2 3)
+	       (+ x head)
+	       nil))
+
+;; Recursive Macros
+
+(defun pairs (lst)
+  ;; Define function take a list & accumulator
+  (labels ((f (lst acc)
+	     ;; Split the list 
+	     (split lst
+		    ;; If there are items in the tail end
+		    (if tail
+			;; Call the function again with the remainder of the list
+			(f (cdr tail)
+			   ;; cons the cons of head and tail to remainder of accumulator
+			   (cons (cons head
+				       ;; cons first element of tail to head
+				       (car tail))
+				 acc))
+			;; If tail is empty, reverse the accumulator and return it
+			(reverse acc))
+		    ;; return the reverse of the accumulator
+		    (reverse acc))))
+    ;; Start the function with the full list & empty accumulator
+    (f lst nil)))
+
+(pairs '(a b c d e f ))
+
+(defmacro recurse (vars &body body)
+  ;; Create a variable 'p' by splitting the 'vars' into pairs using the pairs function
+  (let1 p (pairs vars)
+    ;; Define the local function 'self'
+    `(labels ((self
+		  ;; Pass the first element (the name) of each item of p into body
+		  ,(mapcar #'car p)
+		,@body))
+       ;; Call the self function to start the recursion, using the second element (value) of each
+       ;; item in p
+       (self ,@(mapcar #'cdr p)))))
+
+(defun my-length (lst)
+  (recurse
+      ;; Variable list 
+      (lst				;name of list
+       lst				;value of var
+       acc				;name of accumulator
+       0				;value of accumulator
+       )
+    (split lst
+	   (f tail (1+ acc))
+	   acc)))
