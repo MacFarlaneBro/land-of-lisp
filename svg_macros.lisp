@@ -58,6 +58,46 @@
 
 
 (defun brightness (col amt)
+  ;; For each column
   (mapcar (lambda (x)
+	    ;; get the value of x + amt, bounded by 0 and 255
 	    (min 255 (max 0 (+ x amt))))
+	  ;; The arguments for mapcar
 	  col))
+
+(defun svg-style (color)
+  ;; add the color values to the fill field.
+  (format nil
+	  "~{fill:rgb(~a,~a~,a);stroke:rgb(~a~a~a)~}"
+	  (append color
+		  (brightness color -100))))
+
+(defun circle (center radius color)
+  ;; Generate a circle tag
+  (tag circle
+       ;; set the center of the circle using x and y 
+       (cx (car center)
+	   cy (cdr center)
+	   ;; Specify the radius of the circle
+	   r radius
+	   ;; specify the style
+	   style (svg-style color))))
+
+(svg (circle '(50 . 50) 50 '(255 0 0))
+     (circle '(100 . 100) 50 '(0 0 255)))
+
+(defun polygon (points color)
+  (tag polygon (points (format nil
+			       "~{~a,~a~}"
+			       (mapcan (lambda (tp)
+					 (list (car tp) (cdr tp)))
+				       points))
+		       style (svg-style color))))
+
+(defun random-walk (value length)
+  (unless (zerop length)
+    (cons value
+	  (random-walk (if (zerop (random 2))
+			   (1- value)
+			   (1+ value))
+		       (1- length)))))
