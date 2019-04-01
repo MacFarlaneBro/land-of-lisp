@@ -1,3 +1,112 @@
+;; Define a new macro called let1 which takes three arguments, var, val and body
+(defmacro let1  (var val
+		;; This is essentially a varargs definition
+		&body body)
+  ;; Transform those arguments into the lisp code defined below
+  `(let ((,var ,val))
+     ;; The body argument is put in place using the splicing comma (,@)
+     ,@body))
+
+(let ((foo (+ 2 3)))
+  (* foo foo))
+
+(let1
+    ;; var
+    foo
+    ;; val
+    (+ 2 3)
+  ;; body
+  (* foo foo))
+
+(defun add (a b)
+  (let1 x (+ a b)
+    (format t "The sum is ~a" x)
+    x))
+
+(defun my-length (lst)
+  (labels ((f (lst acc)
+	     (split lst
+		    ;; Here we use the tail variable defined in the macro, though not present elsewhere in the defined function, macros that automatically generate variables in this way are called anaphoric macros.
+		    (f tail (1+ acc))
+		    acc)))
+    (f lst 0)))
+
+;; Updated version of split macro
+(defmacro split (val yes no)
+  `(let1 x ,val
+     (if x
+	 (let ((head (car x))
+	       (tail (cdr x)))
+	   ,yes
+	   ,no))))
+
+;; In order to avoid the previous issue, there is a CL function whose sole purpose is to generate silly variable names that noone would ever personally use
+(gensym)
+
+;; Final split macro version
+(defmacro split (val yes no)
+  ;; First define a varible 'g' using the no-clash gensym name
+  (let1 g (gensym)
+    `(let1 ,g ,val
+       (if ,g
+	   (let ((head (car ,g))
+		 (tail (cdr ,g)))
+	     ,yes)
+	   ,no))))
+
+(macroexpand '(split '(2 3)
+	       (+ x head)
+	       nil))
+
+;; Recursive Macros
+
+(defun pairs (lst)
+  ;; Define function take a list & accumulator
+  (labels ((f (lst acc)
+	     ;; Split the list 
+	     (split lst
+		    ;; If there are items in the tail end
+		    (if tail
+			;; Call the function again with the remainder of the list
+			(f (cdr tail)
+			   ;; cons the cons of head and tail to remainder of accumulator
+			   (cons (cons head
+				       ;; cons first element of tail to head
+				       (car tail))
+				 acc))
+			;; If tail is empty, reverse the accumulator and return it
+			(reverse acc))
+		    ;; return the reverse of the accumulator
+		    (reverse acc))))
+    ;; Start the function with the full list & empty accumulator
+    (f lst nil)))
+
+(pairs '(a b c d e f ))
+
+(defmacro recurse (vars &body body)
+  ;; Create a variable 'p' by splitting the 'vars' into pairs using the pairs function
+  (let1 p (pairs vars)
+    ;; Define the local function 'self'
+    `(labels ((self
+		  ;; Pass the first element (the name) of each item of p into body
+		  ,(mapcar #'car p)
+		,@body))
+       ;; Call the self function to start the recursion, using the second element (value) of each
+       ;; item in p
+       (self ,@(mapcar #'cdr p)))))
+
+(defun my-length (lst)
+  (recurse
+      ;; Variable list 
+      (lst				;name of list
+       lst				;value of var
+       acc				;name of accumulator
+       0				;value of accumulator
+       )
+    (split lst
+	   (f tail (1+ acc))
+	   acc)))
+
 (defun print-tag (name alst closingp)
   ;; Print the opening tag
   (princ #\<)
@@ -14,7 +123,27 @@
   ;; Print the closing tag
   (princ #\>))
 
-(print-tag 'mytag '((color . blue) (height . 9)) nil)
+(defun pairs (lst)
+  ;; Define function take a list & accumulator
+  (labels ((f (lst acc)
+	     ;; Split the list 
+	     (split lst
+		    ;; If there are items in the tail end
+		    (if tail
+			;; Call the function again with the remainder of the list
+			(f (cdr tail)
+			   ;; cons the cons of head and tail to remainder of accumulator
+			   (cons (cons head
+				       ;; cons first element of tail to head
+				       (car tail))
+				 acc))
+			;; If tail is empty, reverse the accumulator and return it
+			(reverse acc))
+		    ;; return the reverse of the accumulator
+		    (reverse acc))))
+    ;; Start the function with the full list & empty accumulator
+    (f lst nil)))
+
 
 (defmacro tag (name atts &body body)
   ;; Execute the commands in order
@@ -32,13 +161,6 @@
      ,@body
      ;; print the end tag
      (print-tag ',name nil t)))
-
-(macroexpand '(tag mytag (color 'blue height (+ 4 5))))
-
-
-(tag html ()
-  (tag body ()
-    (princ "Hello World!")))
 
 (defmacro html (&body body)
   `(tag html ()
@@ -95,9 +217,37 @@
 		       style (svg-style color))))
 
 (defun random-walk (value length)
+  ;; If the length isnt zero
   (unless (zerop length)
+    ;; Cons value with the result of
     (cons value
+	  ;; Recursively call the function with either
 	  (random-walk (if (zerop (random 2))
+			   ;; one less than the current value
 			   (1- value)
+			   ;; or one more tthan the current value
 			   (1+ value))
+		       ;; reduce the length before recursing
 		       (1- length)))))
+
+(random-walk 100 10)
+
+(with-open-file (*standard-output* "random_walk.svg"
+				   :direction :output
+				   :if-exists :supersede)
+  ;; Open the given file and overwrite it if it exists
+  (svg (loop repeat 10
+	     ;; For 10 iterations
+	     do (polygon
+		 ;; Create a polygon
+		 (append '((0 . 200))
+			 ;; For the length of the graph
+			 (loop for x
+			       ;; Generate graph ticks from 0-400 for 100 ticks
+			       for y in (random-walk 100 400)
+			       ;; Return a cons plot of the x and y values
+			       collect (cons x y))
+			 '((400 . 200)))
+		 ;; Get three random numbers between 1 and 256 
+		 (loop repeat 3
+		       collect (random 256))))))
