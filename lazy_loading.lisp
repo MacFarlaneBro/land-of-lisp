@@ -1,14 +1,6 @@
-(lazy (+ 1 2))
-
-(force (lazy (+ 1 2)))
-
 (defun add (a b)
   (princ "I am adding now")
   (+ a b))
-
-(defparameter *foo* (lazy (add 1 2)))
-
-(force *foo*)
 
 (defmacro lazy (&body body)
   ;; Define 2 variables called forced & value
@@ -108,3 +100,23 @@
     ;; Finally start the recursion using the newly defined function.
     (lazy (unless (lazy-null lst)
 	    (f (funcall fun (lazy-car lst)))))))
+
+(defun lazy-find-if (fun lst)
+  ;; Unless the list if empty
+  (unless (lazy-null lst)
+    ;; assign the first element of lst to x
+    (let ((x (lazy-car lst)))
+      ;; If calling the supplied function with x as its arg is true
+      (if (funcall fun x)
+	  ;; return x
+	  x
+	  ;; Otherwise recall the function on the remainder of the list
+	  (lazy-find-if fun (lazy-cdr lst))))))
+
+(defun lazy-nth (n lst)
+  ;; If n is zero
+  (if (zerop n)
+      ;; Return the value currently at the top of the list
+      (lazy-car lst)
+      ;; Otherwise decrement n and recurse
+      (lazy-nth (1- n) (lazy-cdr lst))))
