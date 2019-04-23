@@ -106,4 +106,111 @@
       ;; otherwise announc the winner
       (announce-winner (cadr tree))))
 
-(play-vs-human (game-tree (gen-board) 0 0 t))
+(defun limit-tree-depth (tree depth)
+  ;; Create a list 
+  (list
+   ;; Get the first element of the current tree
+   (car tree)
+   ;; And the next element
+   (cadr tree)
+   ;; If the depth checker is now zero
+   (if (zerop depth)
+       ;; return nil
+       (lazy-nil)
+       ;; Otherwise for each remaining item
+       (lazy-mapcar (lambda (move)
+		      ;; Get the first element
+		      (list (car move)
+			    ;; Recurse with the remainer of the tree and one less the depth
+			    (limit-tree-depth (cadr move) (1- depth))))
+		    ;; In the rest of the tree
+		    (caddr tree)))))
+
+
+(defparameter *ai-level* 4)
+(defun handle-computer (tree)
+  ;; Set 'ratings' to calling get ratings on the result of limiting the tree depth to the ai-level
+  (let ((ratings (get-ratings (limit-tree-depth tree *ai-level*)
+			      ;; and the first element of tree
+			      (car tree))))
+    ;; Get the first element of the remainder of
+    (cadr
+     ;; Get nth item
+     (lazy-nth
+      ;; Get the index of the highest rated move
+      (position (apply #'max ratings) ratings)
+      ;; From the available moves
+      (caddr tree)))))
+
+(defun play-vs-computer (tree)
+  ;; Print the tree
+  (print-info tree)
+  ;; If the remainder of the tree is null, announce the inner
+  (cond ((lazy-null (caddr tree)) (announce-winner (cadr tree)))
+	;; If the first item is zero, it's the humans turn
+	((zerop (car tree)) (play-vs-computer (handle-human tree)))
+	;; Otherwise it's the computers turn
+	(t (play-vs-computer (handle-computer tree)))))
+
+(defun score-board (board player)
+  ;; For each hex in the board
+  (loop for hex across board
+	;; For each possible move
+	for pos from 0
+	;; Add 
+	sum
+	;; If the the current hex is the players
+	(if (eq (car hex) player)
+	    ;; If the current hex is threatened
+	    (if (threatened pos board)
+		;; return 1 
+		1
+		;; Otherwiser return 2
+		2)
+	    ;; If the hex is not owned by the current player, return -1
+	    -1)))
+
+(defun threatened (pos board)
+  ;; set hex to the current hex
+  (let* ((hex (aref board pos))
+	 ;; get the current hex player
+	 (player (car hex))
+	 ;; get the current hex dice
+	 (dice (cadr hex)))
+    ;; For each neighbour of the current hex
+    (loop for n in (neighbors pos)
+	  ;; Get the neighbouring hex
+	  do (let* ((nhex (aref board n))
+		    ;; player
+		    (nplayer (car nhex))
+		    ;; and dice
+		    (ndice (cadr nhex)))
+	       ;; When the hex is owned by another player and has more dice
+	       (when (and (not (eq player nplayer)) (> ndice dice))
+		 ;; return true
+		 (return t))))))
+
+(defun get-ratings (tree player)
+  ;; Fully evalate lazy list
+  (take-all (lazy-mapcar (lambda (move)
+			   ;; Get the rating for every move
+			   (rate-postition (cadr move) player))
+			 (caddr tree))))
+
+(defun rate-position (tree player)
+  ;; Get available moves
+  (let ((moves (caddr tree)))
+    ;; If there are moves remaining
+    (if (not (lazy-null moves))
+	;; If the current player owns the current first element
+	(apply (if (eq (car tree) player)
+		   ;; return max function
+		   #'max
+		   ;; Otherwise return min function
+		   #'min)
+	       ;; get the ratings for each move
+	       (get-ratings tree player))
+	;; otherwise score the available moves
+	(score-board (cadr tree) player))))
+
+(play-vs-computer (game-tree (gen-board) 0 0 t))
