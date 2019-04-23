@@ -213,4 +213,77 @@
 	;; otherwise score the available moves
 	(score-board (cadr tree) player))))
 
+
+(defun ab-get-ratings-max (tree player upper-limit lower-limit)
+  ;; Create function f which takes 2 args, moves and  lower limit
+  (labels ((f (moves lower-limit)
+	     ;; unless moves is empty
+	     (unless (lazy-null moves)
+	       ;; set 'x' to the result of calling rate position on the first element in moves
+	       (let ((x (ab-rate-position (cadr (lazy-car moves))
+					  ;; passing in the player, upper & lower limit
+					  player
+					  upper-limit
+					  lower-limit)))
+		 ;; If x is greater than the upper limit
+		 (if (>= x upper-limit)
+		     ;; return a list of only x
+		     (list x)
+		     ;; Otherwise return the cons of x and the result of recursing the function
+		     (cons x (f
+			      ;; passing in the remainder of moves
+			      (lazy-cdr moves)
+			      ;; the max of either x or the lower-limit as lower-limit
+			      (max x lower-limit))))))))
+    ;; Start the recursing function
+    (f (caddr tree) lower-limit)))
+
+(defun ab-get-ratings-min (tree player upper-limit lowerlimit)
+  (labels ((f (moves upper-limit)
+	     (unless (lazy-null moves)
+	       (let ((x (ab-rate-position (cadr (lazy-car moves))
+					  player
+					  upper-limit
+					  lower-limit)))
+		 (if (<= x lower-limit)
+		     (list x)
+		     (cons x (f lazy-cdr moves) (min x upper-limit)))))))
+    (f (caddr tree) upper-limit)))
+
+(defun ab-rate-position (tree player upper-limit lower-limit)
+  ;; Get the current moves possible 
+  (let ((moves (caddr tree)))
+    ;; If there are moves remaining
+    (if (not (lazy-null moves))
+	;; If it's the current players hex
+	(if (eq (car tree) player)
+	    ;; Get the max rating
+	    (apply #'max (ab-get-ratings-max tree
+					     player
+					     upper-limit
+					     lower-limit))
+	    ;; Get the min rating
+	    (apply #'max (ab-get-ratings-max tree
+					     player
+					     upper-limit
+					     lower-limit)))
+	;; print the score board
+	(score-board (cadr tree) player))))
+
+(defun handle-computer (tree)
+  ;; Set the ratings
+  (let ((ratings (ab-get-ratings-max (limit-tree-depth tree *ai-level*)
+				     (car tree)
+				     most-positive-fixnum
+				     most-negative-fixnum)))
+    ;; Execute the best current move
+    (cadr
+     (lazy-nth
+      ;; Get the max rated position
+      (position (apply #'max ratings) ratings)
+      (caddr tree)))))
+
+(defparameter *board-size* 5)
+(defparameter *board-hexnum* (* *board-size* *board-size*))
+
 (play-vs-computer (game-tree (gen-board) 0 0 t))
